@@ -844,11 +844,19 @@ public class WireManagedSpaceFactory implements Opcodes, WireTypesAndMethods {
 			super(spaceClassLoader);
 			this.classNameFilter = classNameFilter;
 		}
+		
+		private boolean isEnrichmentCandidateClass(String name) {
+			return classNameFilter.test(name) && !hasEnrichmentMarker(name);
+		}
+		
+		private boolean hasEnrichmentMarker(String name) {
+			return spaceClassLoader.getResource(name + ".enriched") != null;
+		}
 
 		@Override
 		protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
 			synchronized (getClassLoadingLock(name)) {
-				if (classNameFilter.test(name)) {
+				if (isEnrichmentCandidateClass(name)) {
 					Class<?> loadedClass = findLoadedClass(name);
 
 					if (loadedClass == null) {
