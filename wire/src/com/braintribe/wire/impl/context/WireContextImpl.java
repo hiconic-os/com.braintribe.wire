@@ -78,7 +78,7 @@ public class WireContextImpl<S extends WireSpace> implements WireContext<S>, Int
 	private final Map<ScopeContext, ScopeContextHolders> scopeContextHoldersMap = new ConcurrentHashMap<>();
 	private Function<ScopeContext, Map<ScopeContext, ScopeContextHolders>> shareScopeContextsExpert;
 	private List<Class<? extends WireSpace>> spacesToAutoload = Collections.emptyList();
-	private List<CreationListener> creationListeners = new ArrayList<>();
+	private final List<CreationListener> creationListeners = new ArrayList<>();
 
 	public WireContextImpl(Class<S> beanSpace, ContractSpaceResolver contractSpaceResolver) {
 		this(null, beanSpace, contractSpaceResolver);
@@ -243,10 +243,17 @@ public class WireContextImpl<S extends WireSpace> implements WireContext<S>, Int
 
 					if (WireSpace.class.isAssignableFrom(fieldType)) {
 						injectValue = getSpaceRecursive(fieldType.asSubclass(WireSpace.class), false);
+
 					} else if (WireScope.class.isAssignableFrom(fieldType)) {
 						injectValue = getScope(fieldType.asSubclass(WireScope.class));
+
 					} else if (WireContext.class.isAssignableFrom(fieldType)) {
 						injectValue = WireContextImpl.this;
+
+					} else {
+						// Should throw an exception, at least if some kind of "strict" mode was explicitly activated 
+						logger.warning("@Import FAILED. Field in space " + beanSpaceClass.getSimpleName() + " has unsupported type: "
+								+ fieldType.getSimpleName() + ". Supported types are: WireSpace, WireScope and WireContext.");
 					}
 
 					if (injectValue != null) {
