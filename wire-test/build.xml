@@ -15,5 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 <project xmlns:artifact="antlib:org.apache.maven.artifact.ant" xmlns:bt="antlib:com.braintribe.build.ant.tasks" basedir="." default="dist">
+	<!-- Temporary migration hook: run the same suite with asm, class-file, or compare. -->
+	<property name="wire.enrichment" value="asm" />
+	<property name="unittests.jvmarg1" value="-Dcom.braintribe.wire.enrichment=${wire.enrichment}" />
 	<bt:import artifact="com.braintribe.devrock.ant:unit-test-ant-script#1.0" useCase="DEVROCK" />
 </project>

@@ -43,6 +43,7 @@ import com.braintribe.wire.impl.contract.InstanceContractResolution;
 import com.braintribe.wire.impl.contract.MapBasedContractSpaceResolver;
 import com.braintribe.wire.impl.contract.NameConventionContractSpaceResolver;
 import com.braintribe.wire.impl.contract.StandardContractResolution;
+import com.braintribe.wire.impl.compile.ManagedSpaceEnrichmentMode;
 import com.braintribe.wire.impl.scope.caller.CallerScope;
 import com.braintribe.wire.impl.scope.prototype.PrototypeScope;
 import com.braintribe.wire.impl.scope.referee.AggregateScope;
@@ -65,10 +66,21 @@ public class WireContextBuilderImpl<S extends WireSpace> implements WireContextB
 	private List<Class<? extends WireSpace>> spacesToAutoload;
 	private List<LifecycleListener> lifecycleListeners = new ArrayList<>();
 	private List<CreationListener> creationListeners = new ArrayList<>();
+	private ManagedSpaceEnrichmentMode managedSpaceEnrichmentMode = ManagedSpaceEnrichmentMode.configuredDefault();
 	
 	public WireContextBuilderImpl(Class<S> beanSpace) {
 		super();
 		this.beanSpace = beanSpace;
+	}
+
+	/**
+	 * Selects the temporary managed-space enrichment backend used by this context.
+	 * This implementation-only switch will be removed after Class File API parity
+	 * has been established and ASM has been retired.
+	 */
+	public WireContextBuilderImpl<S> managedSpaceEnrichmentMode(ManagedSpaceEnrichmentMode mode) {
+		this.managedSpaceEnrichmentMode = Objects.requireNonNull(mode, "mode");
+		return this;
 	}
 
 	@Override
@@ -310,6 +322,7 @@ public class WireContextBuilderImpl<S extends WireSpace> implements WireContextB
 		creationListeners.forEach(wireContextImpl::addCreationListener);
 		
 		wireContextImpl.setModulesByBasePackage(modulesByBasePackage);
+		wireContextImpl.setManagedSpaceEnrichmentMode(managedSpaceEnrichmentMode);
 
 		wireContextImpl.initialize();
 

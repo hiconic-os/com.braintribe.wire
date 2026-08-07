@@ -52,6 +52,7 @@ import com.braintribe.wire.api.space.ContractResolution;
 import com.braintribe.wire.api.space.ContractSpaceResolver;
 import com.braintribe.wire.api.space.WireSpace;
 import com.braintribe.wire.impl.compile.WireManagedSpaceFactory;
+import com.braintribe.wire.impl.compile.ManagedSpaceEnrichmentMode;
 import com.braintribe.wire.impl.lifecycle.MulticastLifecycleListener;
 import com.braintribe.wire.impl.lifecycle.NoopLifecycleListener;
 import com.braintribe.wire.impl.lifecycle.StandardLifecycleListener;
@@ -73,6 +74,7 @@ public class WireContextImpl<S extends WireSpace> implements WireContext<S>, Int
 	private Predicate<String> spaceClassesSelector = (String name) -> false;
 	private Class<S> rootBeanSpaceClass;
 	private ClassLoader spaceClassLoader;
+	private ManagedSpaceEnrichmentMode managedSpaceEnrichmentMode = ManagedSpaceEnrichmentMode.asm;
 	private final ThreadLocal<Deque<InstanceHolder>> stackLocal = ThreadLocal.withInitial(ArrayDeque::new);
 	private NavigableMap<String, WireModule> modulesByBasePackage = Collections.emptyNavigableMap();
 	private final Map<ScopeContext, ScopeContextHolders> scopeContextHoldersMap = new ConcurrentHashMap<>();
@@ -103,11 +105,15 @@ public class WireContextImpl<S extends WireSpace> implements WireContext<S>, Int
 		this.spaceClassLoader = spaceClassLoader;
 	}
 
+	public void setManagedSpaceEnrichmentMode(ManagedSpaceEnrichmentMode managedSpaceEnrichmentMode) {
+		this.managedSpaceEnrichmentMode = managedSpaceEnrichmentMode;
+	}
+
 	public void initialize() {
 		if (spaceClassLoader != null) {
-			wireBeanSpaceFactory = new WireManagedSpaceFactory(this, spaceClassesSelector, spaceClassLoader);
+			wireBeanSpaceFactory = new WireManagedSpaceFactory(this, spaceClassesSelector, spaceClassLoader, managedSpaceEnrichmentMode);
 		} else {
-			wireBeanSpaceFactory = new WireManagedSpaceFactory(this, spaceClassesSelector);
+			wireBeanSpaceFactory = new WireManagedSpaceFactory(this, spaceClassesSelector, managedSpaceEnrichmentMode);
 
 		}
 

@@ -23,6 +23,7 @@ limitations under the License.
     <version>2.0.16</version>
     <properties>
         <archetype>library</archetype>
+		<java.version>24</java.version>
     </properties>
     <licenses>
         <license>

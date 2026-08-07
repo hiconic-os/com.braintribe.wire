@@ -83,17 +83,36 @@ public class WireManagedSpaceFactory implements Opcodes, WireTypesAndMethods {
 	private final Map<String, FactoryInfo> factoryByClassName = new ConcurrentHashMap<>();
 	private final WireEnricherClassLoader classLoader;
 	private final InternalWireContext context;
+	private final ManagedSpaceEnricher managedSpaceEnricher;
 	private ClassLoader spaceClassLoader = WireManagedSpaceFactory.class.getClassLoader();
 
 	public WireManagedSpaceFactory(InternalWireContext context, Predicate<String> classNameFilter) {
-		this.context = context;
-		this.classLoader = new WireEnricherClassLoader(classNameFilter);
+		this(context, classNameFilter, ManagedSpaceEnrichmentMode.configuredDefault());
+	}
+
+	public WireManagedSpaceFactory(InternalWireContext context, Predicate<String> classNameFilter, ManagedSpaceEnrichmentMode mode) {
+		this(context, classNameFilter, WireManagedSpaceFactory.class.getClassLoader(), mode);
 	}
 
 	public WireManagedSpaceFactory(InternalWireContext context, Predicate<String> classNameFilter, ClassLoader spaceClassLoader) {
+		this(context, classNameFilter, spaceClassLoader, ManagedSpaceEnrichmentMode.configuredDefault());
+	}
+
+	public WireManagedSpaceFactory(InternalWireContext context, Predicate<String> classNameFilter, ClassLoader spaceClassLoader,
+			ManagedSpaceEnrichmentMode mode) {
 		this.context = context;
 		this.spaceClassLoader = spaceClassLoader;
 		this.classLoader = new WireEnricherClassLoader(classNameFilter);
+		this.managedSpaceEnricher = createManagedSpaceEnricher(mode);
+	}
+
+	private ManagedSpaceEnricher createManagedSpaceEnricher(ManagedSpaceEnrichmentMode mode) {
+		return switch (mode) {
+			case asm -> this::enrichWithAsm;
+			case classFile -> new ClassFileManagedSpaceEnricher(spaceClassLoader);
+			case compare -> new ComparingManagedSpaceEnricher(this::enrichWithAsm,
+					new ClassFileManagedSpaceEnricher(spaceClassLoader));
+		};
 	}
 
 	private FactoryInfo getFactoryInfo(String spaceClassName) {
@@ -228,11 +247,8 @@ public class WireManagedSpaceFactory implements Opcodes, WireTypesAndMethods {
 		return outputStream.toByteArray();
 	}
 
-	public byte[] loadSpaceClass(String className, InputStream in) {
-
+	private byte[] enrichWithAsm(String className, byte[] classBytes) {
 		try {
-			byte classBytes[] = slurpBytes(in);
-			
 			ClassReader reader = new ClassReader(classBytes);
 
 			ClassNode classNode = new ClassNode();
@@ -891,7 +907,7 @@ public class WireManagedSpaceFactory implements Opcodes, WireTypesAndMethods {
 
 		private byte[] loadAndEnsureEnriched(String name) {
 			try (InputStream in = getClassData(name).openStream()) {
-				byte[] spaceClass = loadSpaceClass(name, in);
+				byte[] spaceClass = managedSpaceEnricher.enrich(name, slurpBytes(in));
 
 				/* OutputStream out = new FileOutputStream(new File(name + ".class")); out.write(spaceClass); out.close(); */
 
